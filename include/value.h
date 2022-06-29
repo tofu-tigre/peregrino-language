@@ -4,6 +4,7 @@
 #include "common.h"
 #include "memory.h"
 
+#define MAX_REPRESENTABLE_CONST 0xFFFF // 16-bits
 typedef double Value;
 
 typedef struct {

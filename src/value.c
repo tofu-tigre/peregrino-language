@@ -20,6 +20,8 @@ void free_value_array(ValueArray *array) {
 }
 
 void write_value_array(ValueArray *array, Value value) {
+    assert(array->count <= MAX_REPRESENTABLE_CONST);
+
     if (array->capacity < array->count + 1) {
         // Check if chunk data is NULL
         array->capacity = (array->capacity < INITIAL_CHUNK_SIZE) ?
