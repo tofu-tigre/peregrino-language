@@ -14,7 +14,15 @@ int main(int argc, const char* argv[])
     Chunk chunk;
     init_vm(&vm);
     init_chunk(&chunk);
-    write_constant(&chunk, 788, 1);
+
+    for(int i = 0; i < 257; i++) {
+        write_constant(&chunk, i, i);
+        write_constant(&chunk, i, i);
+        write_chunk(&chunk, OP_ADD, 1);
+    }
+
+    
+
     write_chunk(&chunk, OP_RETURN, 2);
 
     interpret(&vm, &chunk);

@@ -10,8 +10,8 @@ void init_chunk(Chunk *chunk) {
            in order for garbage collector to
            have a count of memory in use.
     */
-    chunk->code = reallocate(chunk->code, 0, INITIAL_CHUNK_SIZE * sizeof(uint8_t));
-    chunk->lines = reallocate(chunk->lines, 0, INITIAL_CHUNK_LINE_SIZE * sizeof(int));
+    chunk->code = reallocate(NULL, 0, INITIAL_CHUNK_SIZE * sizeof(uint8_t));
+    chunk->lines = reallocate(NULL, 0, INITIAL_CHUNK_LINE_SIZE * sizeof(int));
     chunk->lines[0] = -1;
     chunk->lines[1] = -1;
     chunk->line_count = 2;
@@ -24,7 +24,6 @@ void free_chunk(Chunk *chunk) {
     chunk->code = reallocate(chunk->code, sizeof(uint8_t) * chunk->capacity, 0);
     chunk->lines = reallocate(chunk->lines, sizeof(int) * chunk->line_capacity, 0);
     free_value_array(&chunk->constants);
-    init_chunk(chunk);
 }
 
 static void add_line(Chunk *chunk, int line) {
