@@ -23,5 +23,5 @@ typedef struct {
 
 void init_vm(VM *vm);
 void free_vm(VM *vm);
-InterpretResult interpret(VM *vm, Chunk *chunk);
+InterpretResult interpret(VM *vm, const char *source);
 #endif

@@ -1,4 +1,5 @@
 #include "vm.h"
+#include "compiler.h"
 
 
 void init_vm(VM *vm) {
@@ -95,8 +96,7 @@ static InterpretResult run(VM *vm) {
     }
 }
 
-InterpretResult interpret(VM *vm, Chunk *chunk) {
-    vm->chunk = chunk;
-    vm->ip = vm->chunk->code;
-    return run(vm);
+InterpretResult interpret(VM *vm, const char *source) {
+    compile(vm, source);
+    return INTERPRET_OK;
 }
