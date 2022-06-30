@@ -4,10 +4,12 @@
 
 void init_vm(VM *vm) {
     init_stack(&vm->stack);
+    vm->chunk = NULL;
 }
 
 void free_vm(VM *vm) {
     free_stack(&vm->stack);
+    if(vm->chunk == NULL) return;
     free_chunk(vm->chunk);
 }
 

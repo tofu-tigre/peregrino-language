@@ -1,0 +1,15 @@
+// Test file #2
+// This should be ignored
+
+var x = 4;
+var y = 2;
+var z = x - y;
+
+class Dummy {
+    var member_a;
+    var member_b;
+}
+
+if(1 != 2 and x == y) {
+    return null;
+}

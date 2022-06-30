@@ -27,7 +27,6 @@ Value pop(Stack *stack) {
 }
 
 void free_stack(Stack *stack) {
-    int used = stack->top - stack->data;
-    stack->data = reallocate(stack->data, used * sizeof(Value), 0);
+    stack->data = reallocate(stack->data, stack->size * sizeof(Value), 0);
     stack->top = NULL;
 }

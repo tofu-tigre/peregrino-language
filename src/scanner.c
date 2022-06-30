@@ -74,7 +74,7 @@ static bool match(Scanner *scanner, char expected) {
 
 
 static bool is_alpha(char c) {
-    return (c >- 'a' && c <= 'z') ||
+    return (c >= 'a' && c <= 'z') ||
         (c >= 'A' && c <= 'Z') ||
         c == '_';
 }
@@ -93,8 +93,10 @@ Token scan_token(Scanner *scanner) {
     if(is_at_end(scanner)) { return make_token(scanner, TOKEN_EOF); }
 
     char c = advance(scanner);
-    if(is_alpha(c)) return identifier(scanner);
-    if(is_digit(c)) return number(scanner);
+    if(is_alpha(c)) { 
+        return identifier(scanner); }
+    if(is_digit(c)) { 
+        return number(scanner); }
     switch(c) {
         case '(': return make_token(scanner, TOKEN_LEFT_PAREN);
         case ')': return make_token(scanner, TOKEN_RIGHT_PAREN);
@@ -224,10 +226,13 @@ static void skip_whitespace(Scanner *scanner) {
                 break;
             case '/':
                 if(peek_next(scanner) == '/') {
-                    while(peek(scanner) != '\n' && !is_at_end(scanner)) advance(scanner);
+                    while(peek(scanner) != '\n' && !is_at_end(scanner)) {
+                        advance(scanner);
+                    }
                 } else {
                     return;
                 }
+                break;
             default:
                 return;
         }
