@@ -21,7 +21,7 @@ typedef struct {
     Stack stack;
 } VM;
 
-void init_vm(VM *vm);
-void free_vm(VM *vm);
-InterpretResult interpret(VM *vm, const char *source);
+void init_vm();
+void free_vm();
+InterpretResult interpret(const char* source);
 #endif

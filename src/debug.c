@@ -23,7 +23,8 @@ static int constant_long_instruction(const char *name, Chunk *chunk, int offset)
 }
 
 void disassemble_chunk(Chunk *chunk, const char *name) {
-    printf("== %s ==\n", name);
+    printf("===== %s =====\n", name);
+    
 
     for (int offset = 0; offset < chunk->count;) {
         // NOTE: disassemble_instruction increments offset.
@@ -37,7 +38,7 @@ int disassemble_instruction(Chunk *chunk, int offset) {
         get_line(chunk, offset) == get_line(chunk, offset - 1)) {
             printf(" | ");
         } else {
-            printf("Line: %4d ", get_line(chunk, offset));
+            printf("%2d ", get_line(chunk, offset));
         }
 
     uint8_t instruction = chunk->code[offset];

@@ -1,33 +1,119 @@
 #include "vm.h"
 #include "compiler.h"
 
+static VM vm;
+static Value add(Value a, Value b);
+static Value subtract(Value a, Value b);
+static Value multiply(Value a, Value b);
+static Value divide(Value a, Value b);
+static uint8_t read_byte();
+static Value read_constant();
+static Value read_constant_long();
+static void binary_op(Value (*op)(Value, Value));
+static InterpretResult run();
 
-void init_vm(VM *vm) {
-    init_stack(&vm->stack);
-    vm->chunk = NULL;
+/* Starts up the virtual machine.
+ * First it creates a chunk and then writes bytecode
+ * to the chunk from the source file using the 
+ * scanner and parser. Finally, it passes the bytecode
+ * chunk into the virtual machine for interpretation.
+ */
+InterpretResult interpret(const char* source) {
+    Chunk chunk;
+    init_chunk(&chunk);
+    if(!compile(source, &chunk)) {
+        free_chunk(&chunk);
+        return INTERPRET_COMPILE_ERROR;
+    }
+    
+    vm.chunk = &chunk;
+    vm.ip = vm.chunk->code;
+
+    InterpretResult result = run();
+    free_chunk(&chunk);
+    return result;
 }
 
-void free_vm(VM *vm) {
-    free_stack(&vm->stack);
-    if(vm->chunk == NULL) return;
-    free_chunk(vm->chunk);
+
+/* The heart of the virtual machine.
+ * Reads the instruction byte code byte-by-byte
+ * and evaluates using a stack.
+ */
+static InterpretResult run() {
+    #ifdef DEBUG_TRACE_EXECUTION
+        printf("\n===== stack trace =====");
+    #endif
+    for(;;) {
+        #ifdef DEBUG_TRACE_EXECUTION
+        printf("    ");
+        for(Value *slot = vm.stack.data; slot < vm.stack.top; slot++) {
+            printf("[ ");
+            print_value(*slot);
+            printf(" ]");
+        }
+        printf("\n");
+        disassemble_instruction(vm.chunk, (int)(vm.ip - vm.chunk->code));
+        #endif
+
+        uint8_t instruction;
+        switch(instruction = read_byte()) {
+            case OP_CONSTANT: {
+                Value constant = read_constant();
+                push(&vm.stack, constant);
+                break;
+            }
+            case OP_CONSTANT_LONG: {
+                Value constant = read_constant_long();
+                push(&vm.stack, constant);
+                break;
+            }
+            case OP_NEGATE: {
+                push(&vm.stack, -pop(&vm.stack));
+                break;
+            }
+            case OP_ADD: { binary_op(&add); break; }
+            case OP_SUBTRACT: { binary_op(&subtract); break; }
+            case OP_MULTIPLY: { binary_op(&multiply); break; }
+            case OP_DIVIDE: { binary_op(&divide); break; }
+            case OP_RETURN: {
+                print_value(pop(&vm.stack));
+                printf("\n");
+                return INTERPRET_OK;
+            }
+        }
+    }
 }
 
-static uint8_t read_byte(uint8_t **ip) {
-    uint8_t val = **ip;
-    (*ip)++;
-    return val;
+
+void init_vm() {
+    init_stack(&vm.stack);
+    vm.chunk = NULL;
 }
 
-static Value read_constant(VM *vm) {
-    uint8_t index = read_byte(&(vm->ip));
-    return vm->chunk->constants.values[index];
+
+void free_vm() {
+    free_stack(&vm.stack);
+    if(vm.chunk == NULL) return;
+    free_chunk(vm.chunk);
 }
 
-static Value read_constant_long(VM *vm) {
-    uint16_t index = (read_byte(&(vm->ip)) << 8) | read_byte(&(vm->ip));
-    return vm->chunk->constants.values[index];
+
+static uint8_t read_byte() {
+    return *vm.ip++;
 }
+
+
+static Value read_constant() {
+    uint8_t index = read_byte();
+    return vm.chunk->constants.values[index];
+}
+
+
+static Value read_constant_long() {
+    uint16_t index = (read_byte() << 8) | read_byte();
+    return vm.chunk->constants.values[index];
+}
+
 
 static Value add(Value a, Value b) {
     return a + b;
@@ -49,56 +135,8 @@ static Value divide(Value a, Value b) {
 }
 
 
-static void binary_op(VM *vm, Value (*op)(Value, Value)) {
-    Value b = pop(&vm->stack);
-    Value a = pop(&vm->stack);
-    push(&vm->stack, op(a, b));
-}
-
-
-static InterpretResult run(VM *vm) {
-    for(;;) {
-        #ifdef DEBUG_TRACE_EXECUTION
-        printf("    ");
-        for(Value *slot = vm->stack.data; slot < vm->stack.top; slot++) {
-            printf("[ ");
-            print_value(*slot);
-            printf(" ]");
-        }
-        printf("\n");
-        disassemble_instruction(vm->chunk, (int)(vm->ip - vm->chunk->code));
-        #endif
-
-        uint8_t instruction;
-        switch(instruction = read_byte(&(vm->ip))) {
-            case OP_CONSTANT: {
-                Value constant = read_constant(vm);
-                push(&vm->stack, constant);
-                break;
-            }
-            case OP_CONSTANT_LONG: {
-                Value constant = read_constant_long(vm);
-                push(&vm->stack, constant);
-                break;
-            }
-            case OP_NEGATE: {
-                push(&vm->stack, -pop(&vm->stack));
-                break;
-            }
-            case OP_ADD: { binary_op(vm, &add); break; }
-            case OP_SUBTRACT: { binary_op(vm, &subtract); break; }
-            case OP_MULTIPLY: { binary_op(vm, &multiply); break; }
-            case OP_DIVIDE: { binary_op(vm, &divide); break; }
-            case OP_RETURN: {
-                print_value(pop(&vm->stack));
-                printf("\n");
-                return INTERPRET_OK;
-            }
-        }
-    }
-}
-
-InterpretResult interpret(VM *vm, const char *source) {
-    compile(vm, source);
-    return INTERPRET_OK;
+static void binary_op(Value (*op)(Value, Value)) {
+    Value b = pop(&vm.stack);
+    Value a = pop(&vm.stack);
+    push(&vm.stack, op(a, b));
 }

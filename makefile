@@ -5,7 +5,7 @@ EXE := $(BIN_DIR)/grino
 
 SRC := $(wildcard $(SRC_DIR)/*.c)
 OBJ := $(SRC:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
-CFLAGS := -Wall -g
+CFLAGS := -Wall -g -std=c99
 CPPFLAGS := -Iinclude -MMD -MP
 LDFLAGS := -Llib
 LDLIBS :=

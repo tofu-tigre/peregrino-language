@@ -28,11 +28,9 @@ void free_chunk(Chunk *chunk) {
 
 static void add_line(Chunk *chunk, int line) {
     // Check if there is enough space for new element
-    //printf("LINE CAPACITY: %d  LINE COUNT: %d\n", chunk->line_capacity, chunk->line_count);
     if (chunk->line_capacity < chunk->line_count + 1) {
         // Check if chunk data is NULL
         chunk->line_capacity = chunk->line_capacity * CHUNK_GROWTH_FACTOR;
-        //printf("NEW LINE CAPACITY: %d\n", chunk->line_capacity);
         
         chunk->lines = reallocate(chunk->lines, chunk->line_count * sizeof(int),
             chunk->line_capacity * sizeof(int));
@@ -40,7 +38,6 @@ static void add_line(Chunk *chunk, int line) {
     // Check if previous line is the same as new line
     int curr_line_run_el = chunk->lines[chunk->line_count - 1];
     
-    //printf("CURRENT RUN ELEMENT: %d W/ %d REPEATS\n", curr_line_run_el, chunk->lines[chunk->line_count - 2]);
     if (curr_line_run_el != line) {
         chunk->lines[chunk->line_count] = 1;
         chunk->lines[chunk->line_count + 1] = line;
@@ -56,10 +53,7 @@ static void add_line(Chunk *chunk, int line) {
 int get_line(Chunk *chunk, int offset) {
     int index = 2;
 
-
     // Given offset, eat through chunk lines until offset == 0
-    //printf("OFFSET: %d\n", offset);
-
     while(offset > 0) {
         offset -= chunk->lines[index];
         //printf("OFFSET: %d\n", offset);
@@ -96,7 +90,6 @@ void write_constant(Chunk *chunk, Value value, int line) {
 
     uint16_t index = add_constant(chunk, value);
     uint8_t left_bits = (index & 0xFF00) >> 8;
-    //printf("HEX: %x  LEFT: %x  RIGHT: %x\n", index, (index & 0xFF00) >> 8, index & 0x00FF);
     if(left_bits > 0) { // CONST_LONG
         write_chunk(chunk, OP_CONSTANT_LONG, line);
         write_chunk(chunk, left_bits, line);
