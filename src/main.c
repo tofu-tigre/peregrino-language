@@ -63,6 +63,7 @@ static void run_file(const char *path) {
 int main(int argc, const char* argv[])
 {
     setbuf(stdout, NULL);
+    setbuf(stderr, NULL);
     init_vm();
 
     if(argc == 1) {

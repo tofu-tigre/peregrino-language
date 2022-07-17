@@ -111,7 +111,7 @@ Token scan_token() {
         case '/': return make_token(TOKEN_SLASH);
         case '*': return make_token(TOKEN_STAR);
         case '!':
-            return make_token(match('=') ? TOKEN_BANG_EQUAL : TOKEN_BANG);
+            if(match('=')) return make_token(TOKEN_BANG_EQUAL); break;
         case '=':
             return make_token(match('=') ? TOKEN_EQUAL_EQUAL : TOKEN_EQUAL);
         case '<':
@@ -154,7 +154,8 @@ static TokenType identifier_type() {
             }
             break;
         case 'i': return check_keyword(1, 1, "f", TOKEN_IF);
-        case 'n': return check_keyword(1, 3, "ull", TOKEN_NULL);
+        case 'n': return check_keyword(1, 2, "ot", TOKEN_BANG);
+        case 'N': return check_keyword(1, 3, "ULL", TOKEN_NULL);
         case 'o': return check_keyword(1, 1, "r", TOKEN_OR);
         case 'p': return check_keyword(1, 4, "rint", TOKEN_PRINT);
         case 'r': return check_keyword(1, 5, "eturn", TOKEN_RETURN);

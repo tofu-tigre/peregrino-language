@@ -3,7 +3,6 @@
 
 #include "chunk.h"
 #include "common.h"
-#include "value.h"
 #include "debug.h"
 #include "stack.h"
 

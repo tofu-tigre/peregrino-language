@@ -1,16 +1,24 @@
+#include <stdarg.h>
+#include <stdio.h>
 #include "vm.h"
 #include "compiler.h"
+#include "value.h"
 
 static VM vm;
-static Value add(Value a, Value b);
-static Value subtract(Value a, Value b);
-static Value multiply(Value a, Value b);
-static Value divide(Value a, Value b);
+static double add(double a, double b);
+static double subtract(double a, double b);
+static double multiply(double a, double b);
+static double divide(double a, double b);
+static double less(double a, double b);
+static double greater(double a, double b);
 static uint8_t read_byte();
 static Value read_constant();
 static Value read_constant_long();
-static void binary_op(Value (*op)(Value, Value));
+static InterpretResult binary_op(ValueType type, double (*op)(double, double));
 static InterpretResult run();
+static void runtime_error(const char* format, ...);
+static bool is_falsey(Value value);
+static bool values_equal(Value a, Value b);
 
 /* Starts up the virtual machine.
  * First it creates a chunk and then writes bytecode
@@ -68,13 +76,65 @@ static InterpretResult run() {
                 break;
             }
             case OP_NEGATE: {
-                push(&vm.stack, -pop(&vm.stack));
+                if(!IS_NUMBER(peek(&vm.stack, 0))) {
+                    runtime_error("Operand must be a number.");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                push(&vm.stack, NUMBER_VAL(-AS_NUMBER(pop(&vm.stack))));
                 break;
             }
-            case OP_ADD: { binary_op(&add); break; }
-            case OP_SUBTRACT: { binary_op(&subtract); break; }
-            case OP_MULTIPLY: { binary_op(&multiply); break; }
-            case OP_DIVIDE: { binary_op(&divide); break; }
+            case OP_ADD: { 
+                if(binary_op(VAL_NUMBER, &add) == INTERPRET_RUNTIME_ERROR)
+                    return INTERPRET_RUNTIME_ERROR;
+                break;
+            }
+            case OP_SUBTRACT: {
+                if(binary_op(VAL_NUMBER, &subtract) == INTERPRET_RUNTIME_ERROR)
+                    return INTERPRET_RUNTIME_ERROR;
+                break;
+            }
+            case OP_MULTIPLY: {
+                if(binary_op(VAL_NUMBER, &multiply) == INTERPRET_RUNTIME_ERROR)
+                    return INTERPRET_RUNTIME_ERROR;
+                break;
+            }
+            case OP_DIVIDE: {
+                if(binary_op(VAL_NUMBER, &divide) == INTERPRET_RUNTIME_ERROR)
+                    return INTERPRET_RUNTIME_ERROR;
+                break;
+            }
+            case OP_NULL: {
+                push(&vm.stack, NULL_VAL);
+                break;
+            }
+            case OP_TRUE: {
+                push(&vm.stack, BOOL_VAL(true));
+                break;
+            }
+            case OP_FALSE: {
+                push(&vm.stack, BOOL_VAL(false));
+                break;
+            }
+            case OP_NOT: {
+                push(&vm.stack, BOOL_VAL(is_falsey(pop(&vm.stack))));
+                break;
+            }
+            case OP_EQUAL: {
+                Value b = pop(&vm.stack);
+                Value a = pop(&vm.stack);
+                push(&vm.stack, BOOL_VAL(values_equal(a, b)));
+                break;
+            }
+            case OP_GREATER: {
+                if(binary_op(VAL_BOOL, &greater) == INTERPRET_RUNTIME_ERROR)
+                    return INTERPRET_RUNTIME_ERROR;
+                break;
+            }
+            case OP_LESS: {
+                if(binary_op(VAL_BOOL, &less) == INTERPRET_RUNTIME_ERROR)
+                    return INTERPRET_RUNTIME_ERROR;
+                break;
+            }
             case OP_RETURN: {
                 print_value(pop(&vm.stack));
                 printf("\n");
@@ -84,6 +144,26 @@ static InterpretResult run() {
     }
 }
 
+
+static void runtime_error(const char* format, ...) {
+    va_list args;
+    va_start(args, format);
+    vfprintf(stderr, format, args);
+    va_end(args);
+    fputs("\n", stderr);
+
+    size_t instruction = vm.ip - vm.chunk->code - 1;
+    int line = get_line(vm.chunk, instruction);
+    fprintf(stderr, "[line %d] in script\n", line);
+    // free_stack(&vm.stack); Currently freed at end.
+}
+
+
+static bool is_falsey(Value value) {
+    return IS_NULL(value) || 
+        (IS_BOOL(value) && !AS_BOOL(value)) ||
+        (IS_NUMBER(value) && AS_NUMBER(value) == 0);
+}
 
 void init_vm() {
     init_stack(&vm.stack);
@@ -115,28 +195,68 @@ static Value read_constant_long() {
 }
 
 
-static Value add(Value a, Value b) {
+static double add(double a, double b) {
+
     return a + b;
 }
 
 
-static Value subtract(Value a, Value b) {
+static double subtract(double a, double b) {
     return a - b;
 }
 
 
-static Value multiply(Value a, Value b) {
+static double multiply(double a, double b) {
     return a * b;
 }
 
 
-static Value divide(Value a, Value b) {
+static double divide(double a, double b) {
     return a / b;
 }
 
 
-static void binary_op(Value (*op)(Value, Value)) {
-    Value b = pop(&vm.stack);
-    Value a = pop(&vm.stack);
-    push(&vm.stack, op(a, b));
+static double greater(double a, double b) {
+    return a > b ? 1. : 0.;
+}
+
+
+static double less(double a, double b) {
+    return a < b ? 1. : 0.;
+}
+
+static InterpretResult binary_op(ValueType type, double (*op)(double, double)) {
+    if(!IS_NUMBER(peek(&vm.stack, 0)) || !IS_NUMBER(peek(&vm.stack, 1))) {
+        runtime_error("Operands must be numbers.");
+        return INTERPRET_RUNTIME_ERROR;
+    }
+    double b = AS_NUMBER(pop(&vm.stack));
+    double a = AS_NUMBER(pop(&vm.stack));
+
+
+    switch(type) {
+        case VAL_BOOL: {
+            bool rv = (op(a, b) == 1 ? true : false);
+            push(&vm.stack, BOOL_VAL(rv));
+            return INTERPRET_OK;
+            break;
+        }
+        case VAL_NUMBER: {
+            push(&vm.stack, NUMBER_VAL(op(a, b)));
+            return INTERPRET_OK;
+            break;
+        }
+        default: return INTERPRET_RUNTIME_ERROR;
+    }
+}
+
+
+static bool values_equal(Value a, Value b) {
+    if(a.type != b.type) return false;
+    switch (a.type) {
+        case VAL_BOOL: return AS_BOOL(a) == AS_BOOL(b);
+        case VAL_NULL: return true;
+        case VAL_NUMBER: return AS_NUMBER(a) == AS_NUMBER(b);
+        default: return false;
+    }
 }
